@@ -1,7 +1,8 @@
+from datetime import datetime
 import imaplib
 import email
 import os
-from datetime import datetime
+import subprocess
 
 def connect_to_email_server(imap_server, email, pwd):
     imap = imaplib.IMAP4_SSL(imap_server)
@@ -35,6 +36,7 @@ def search_emails(imap, imap_date):
 
 def save_attachements(msgnums, imap, download_folder):
     saved_files = 0
+    paths = []
     for msgnum in msgnums[0].split():
         _, data = imap.fetch(msgnum, "RFC822")
 
@@ -60,8 +62,21 @@ def save_attachements(msgnums, imap, download_folder):
                 fp.write(part.get_payload(decode=True))
                 fp.close()
         saved_files += 1
+        paths.append(att_path)
 
-    return saved_files
+    return saved_files, paths
+
+def print_pdfs(paths):
+    sumatra_path = r"C:\Users\antho\AppData\Local\SumatraPDF\SumatraPDF.exe"  
+    while True:
+        ask_print = input("\nWould you like to print the invoices?\n0 = No || 1 = Yes: ")
+        if ask_print == "0":
+            break
+        elif ask_print == "1":
+            for path in paths:
+                print_command = f'"{sumatra_path}" -print-to-default "{path}"'
+                subprocess.run(print_command, shell=True)
+            break
 
 def main():
     imap_server = "imap.gmail.com"
@@ -77,11 +92,12 @@ def main():
 
     _, msgnums = search_emails(imap, imap_date)
 
-    saved_files_count = save_attachements(msgnums, imap, download_folder)
+    saved_files_count, paths = save_attachements(msgnums, imap, download_folder)
     print(f"{saved_files_count} files have been saved.")
 
-    imap.close()
+    print_pdfs(paths)
 
+    imap.close()
 
 if __name__ == "__main__":
     main()
